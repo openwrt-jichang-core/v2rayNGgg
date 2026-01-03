@@ -2,7 +2,8 @@ package com.v2ray.ang.handler
 
 import android.app.Notification
 import android.app.NotificationChannel
-import android.app.NotificationManager
+// 移除冲突的 import，我们在代码中直接使用 android.app.NotificationManager
+// import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
@@ -15,6 +16,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.ProfileItem
 import com.v2ray.ang.extension.toSpeedString
+// 务必确保 MainActivity 存在于此包路径下
 import com.v2ray.ang.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +36,12 @@ object NotificationManager {
     private var lastQueryTime = 0L
     private var mBuilder: NotificationCompat.Builder? = null
     private var speedNotificationJob: Job? = null
-    private var mNotificationManager: NotificationManager? = null
+
+    // 使用全限定名避免与 object NotificationManager 冲突
+    private var mNotificationManager: android.app.NotificationManager? = null
 
     /**
      * Starts the speed notification.
-     * @param currentConfig The current profile configuration.
      */
     fun startSpeedNotification(currentConfig: ProfileItem?) {
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) return
@@ -85,12 +88,12 @@ object NotificationManager {
 
     /**
      * Shows the notification.
-     * @param currentConfig The current profile configuration.
      */
     fun showNotification(currentConfig: ProfileItem?) {
         val service = getService() ?: return
         val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
 
+        // 如果这里报错 'Unresolved reference: MainActivity'，请检查 MainActivity.kt 文件是否存在
         val startMainIntent = Intent(service, MainActivity::class.java)
         val contentPendingIntent = PendingIntent.getActivity(service, NOTIFICATION_PENDING_INTENT_CONTENT, startMainIntent, flags)
 
@@ -108,8 +111,6 @@ object NotificationManager {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 createNotificationChannel()
             } else {
-                // If earlier version channel ID is not used
-                // https://developer.android.com/reference/android/support/v4/app/NotificationCompat.Builder.html#NotificationCompat.Builder(android.content.Context)
                 ""
             }
 
@@ -132,8 +133,6 @@ object NotificationManager {
                 restartV2RayPendingIntent
             )
 
-        //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
-
         service.startForeground(NOTIFICATION_ID, mBuilder?.build())
     }
 
@@ -152,7 +151,6 @@ object NotificationManager {
 
     /**
      * Stops the speed notification.
-     * @param currentConfig The current profile configuration.
      */
     fun stopSpeedNotification(currentConfig: ProfileItem?) {
         speedNotificationJob?.let {
@@ -164,29 +162,25 @@ object NotificationManager {
 
     /**
      * Creates a notification channel for Android O and above.
-     * @return The channel ID.
      */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(): String {
         val channelId = AppConfig.RAY_NG_CHANNEL_ID
         val channelName = AppConfig.RAY_NG_CHANNEL_NAME
+
+        // 修正：使用 android.app.NotificationManager 显式调用常量，避免与 object NotificationManager 冲突
         val chan = NotificationChannel(
             channelId,
-            channelName, NotificationManager.IMPORTANCE_HIGH
+            channelName,
+            android.app.NotificationManager.IMPORTANCE_HIGH
         )
         chan.lightColor = Color.DKGRAY
-        chan.importance = NotificationManager.IMPORTANCE_NONE
+        chan.importance = android.app.NotificationManager.IMPORTANCE_NONE
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         getNotificationManager()?.createNotificationChannel(chan)
         return channelId
     }
 
-    /**
-     * Updates the notification with the given content text and traffic data.
-     * @param contentText The content text.
-     * @param proxyTraffic The proxy traffic.
-     * @param directTraffic The direct traffic.
-     */
     private fun updateNotification(contentText: String?, proxyTraffic: Long, directTraffic: Long) {
         if (mBuilder != null) {
             if (proxyTraffic < NOTIFICATION_ICON_THRESHOLD && directTraffic < NOTIFICATION_ICON_THRESHOLD) {
@@ -202,25 +196,14 @@ object NotificationManager {
         }
     }
 
-    /**
-     * Gets the notification manager.
-     * @return The notification manager.
-     */
-    private fun getNotificationManager(): NotificationManager? {
+    private fun getNotificationManager(): android.app.NotificationManager? {
         if (mNotificationManager == null) {
             val service = getService() ?: return null
-            mNotificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            mNotificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         }
         return mNotificationManager
     }
 
-    /**
-     * Appends the speed string to the given text.
-     * @param text The text to append to.
-     * @param name The name of the tag.
-     * @param up The uplink speed.
-     * @param down The downlink speed.
-     */
     private fun appendSpeedString(text: StringBuilder, name: String?, up: Double, down: Double) {
         var n = name ?: "no tag"
         n = n.substring(0, min(n.length, 6))
@@ -231,10 +214,6 @@ object NotificationManager {
         text.append("•  ${up.toLong().toSpeedString()}↑  ${down.toLong().toSpeedString()}↓\n")
     }
 
-    /**
-     * Gets the service instance.
-     * @return The service instance.
-     */
     private fun getService(): Service? {
         return V2RayServiceManager.serviceControl?.get()?.getService()
     }
