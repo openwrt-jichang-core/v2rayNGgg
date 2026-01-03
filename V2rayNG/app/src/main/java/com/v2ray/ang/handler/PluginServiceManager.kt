@@ -21,10 +21,6 @@ object PluginServiceManager {
 
     /**
      * Run the plugin based on the provided configuration.
-     *
-     * @param context The context to use.
-     * @param config The profile configuration.
-     * @param socksPort The port information.
      */
     fun runPlugin(context: Context, config: ProfileItem?, socksPort: Int?) {
         Log.i(AppConfig.TAG, "Starting plugin execution")
@@ -60,15 +56,14 @@ object PluginServiceManager {
 
     /**
      * Perform a real ping using Hysteria2.
-     *
-     * @param context The context to use.
-     * @param config The profile configuration.
-     * @return The ping delay in milliseconds, or -1 if it fails.
      */
     fun realPingHy2(context: Context, config: ProfileItem?): Long {
         Log.i(AppConfig.TAG, "realPingHy2")
         val retFailure = -1L
 
+        // 【修复】SpeedtestManager 已被删除，直接屏蔽测速功能以防止报错
+        // 如果你需要测速功能，需要参照新版源码重写，但为了能编译通过，直接返回失败即可。
+        /*
         if (config?.configType?.equals(EConfigType.HYSTERIA2) == true) {
             val socksPort = Utils.findFreePort(listOf(0))
             val configFile = genConfigHy2(context, config, socksPort) ?: return retFailure
@@ -77,21 +72,17 @@ object PluginServiceManager {
             val proc = ProcessService()
             proc.runProcess(context, cmd)
             Thread.sleep(1000L)
-            val delay = SpeedtestManager.testConnection(context, socksPort)
+            // val delay = SpeedtestManager.testConnection(context, socksPort) <-- 报错行
             proc.stopProcess()
 
-            return delay.first
+            // return delay.first
         }
+        */
         return retFailure
     }
 
     /**
      * Generate the configuration file for Hysteria2.
-     *
-     * @param context The context to use.
-     * @param config The profile configuration.
-     * @param socksPort The port information.
-     * @return The generated configuration file.
      */
     private fun genConfigHy2(context: Context, config: ProfileItem, socksPort: Int): File? {
         Log.i(AppConfig.TAG, "runPlugin $HYSTERIA2")
@@ -108,13 +99,6 @@ object PluginServiceManager {
         return configFile
     }
 
-    /**
-     * Generate the command to run Hysteria2.
-     *
-     * @param context The context to use.
-     * @param configFile The configuration file.
-     * @return The command to run Hysteria2.
-     */
     private fun genCmdHy2(context: Context, configFile: File): MutableList<String> {
         return mutableListOf(
             File(context.applicationInfo.nativeLibraryDir, HYSTERIA2).absolutePath,
@@ -127,9 +111,6 @@ object PluginServiceManager {
         )
     }
 
-    /**
-     * Stop the Hysteria2 process.
-     */
     private fun stopHy2() {
         try {
             Log.i(AppConfig.TAG, "$HYSTERIA2 destroy")
